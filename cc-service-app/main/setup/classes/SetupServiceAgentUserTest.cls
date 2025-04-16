@@ -2,6 +2,8 @@
 private class SetupServiceAgentUserTest {
     private final static String USERNAME = 'agent-user@mock.com';
     private final static String NICKNAME = 'ccagent-mock';
+    private final static String EXISTING_ALIAS = 'existing';
+    private final static String LOCALE = 'en_US';
 
     @IsTest
     static void testSetup_NewUser() {
@@ -63,13 +65,13 @@ private class SetupServiceAgentUserTest {
         User existingUser = new User(
             LastName = 'Existing User',
             Email = USERNAME,
-            Alias = 'existing',
+            Alias = EXISTING_ALIAS,
             Username = USERNAME,
-            CommunityNickname = 'existing',
-            LocaleSidKey = 'en_US',
+            CommunityNickname = EXISTING_ALIAS,
+            LocaleSidKey = LOCALE,
             TimeZoneSidKey = 'GMT',
             ProfileID = p.Id,
-            LanguageLocaleKey = 'en_US',
+            LanguageLocaleKey = LOCALE,
             EmailEncodingKey = 'UTF-8'
         );
         insert existingUser;
@@ -105,13 +107,13 @@ private class SetupServiceAgentUserTest {
         User testUser = new User(
             LastName = 'Existing User',
             Email = USERNAME,
-            Alias = 'existing',
+            Alias = EXISTING_ALIAS,
             Username = USERNAME,
-            CommunityNickname = 'existing',
-            LocaleSidKey = 'en_US',
+            CommunityNickname = EXISTING_ALIAS,
+            LocaleSidKey = LOCALE,
             TimeZoneSidKey = 'GMT',
             ProfileID = p.Id,
-            LanguageLocaleKey = 'en_US',
+            LanguageLocaleKey = LOCALE,
             EmailEncodingKey = 'UTF-8'
         );
         insert testUser;
