@@ -13,6 +13,9 @@ public with sharing class ExperienceController {
         Id experienceId,
         Long timestamp
     ) {
+        if (timestamp == null) {
+            throw new IllegalArgumentException('Timestamp cannot be null');
+        }
         Date dateFilter = Datetime.newInstance(timestamp).date();
         List<Session__c> sessions = [
             SELECT
