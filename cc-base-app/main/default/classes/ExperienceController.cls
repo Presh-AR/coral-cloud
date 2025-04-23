@@ -17,7 +17,7 @@ public with sharing class ExperienceController {
             throw new IllegalArgumentException('Timestamp cannot be null');
         }
         Date dateFilter = Datetime.newInstance(timestamp).date();
-        List<Session__c> sessions = [
+        return [
             SELECT
                 Id,
                 Booked_Slots__c,
@@ -33,7 +33,6 @@ public with sharing class ExperienceController {
             ORDER BY Start_Time__c ASC
             LIMIT 10
         ];
-        return sessions;
     }
 
     /**
