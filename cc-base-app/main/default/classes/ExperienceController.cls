@@ -13,8 +13,11 @@ public with sharing class ExperienceController {
         Id experienceId,
         Long timestamp
     ) {
+        if (timestamp == null) {
+            throw new IllegalArgumentException('Timestamp cannot be null');
+        }
         Date dateFilter = Datetime.newInstance(timestamp).date();
-        List<Session__c> sessions = [
+        return [
             SELECT
                 Id,
                 Booked_Slots__c,
@@ -30,7 +33,6 @@ public with sharing class ExperienceController {
             ORDER BY Start_Time__c ASC
             LIMIT 10
         ];
-        return sessions;
     }
 
     /**
@@ -41,24 +43,22 @@ public with sharing class ExperienceController {
      */
     @AuraEnabled(Cacheable=true scope='global')
     public static PagedResult getExperiences(String type, Integer pageNumber) {
-        String whereClause = '';
-        if (type != null || type != '') {
-            whereClause = 'WHERE Type__c = :type';
-        }
         Integer pageSize = ExperienceController.PAGE_SIZE;
         Integer offset = (pageNumber - 1) * pageSize;
         PagedResult result = new PagedResult();
         result.pageSize = pageSize;
         result.pageNumber = pageNumber;
-        result.totalItemCount = Database.countQuery(
-            'SELECT count() FROM Experience__c ' + whereClause
-        );
-        result.records = Database.query(
-            'SELECT Id, Name, Description__c, Rating__c, Picture_URL__c FROM Experience__c ' +
-                whereClause +
-                ' WITH USER_MODE' +
-                ' ORDER BY Name LIMIT :pageSize OFFSET :offset'
-        );
+        List<Experience__c> records;
+        Integer totalItemCount;
+        if (String.isNotBlank(type)) {
+            totalItemCount = [SELECT count() FROM Experience__c WHERE Type__c = :type];
+            records = [SELECT Id, Name, Description__c, Rating__c, Picture_URL__c FROM Experience__c WHERE Type__c = :type WITH USER_MODE ORDER BY Name LIMIT :pageSize OFFSET :offset];
+        } else {
+            totalItemCount = [SELECT count() FROM Experience__c];
+            records = [SELECT Id, Name, Description__c, Rating__c, Picture_URL__c FROM Experience__c WITH USER_MODE ORDER BY Name LIMIT :pageSize OFFSET :offset];
+        }
+        result.totalItemCount = totalItemCount;
+        result.records = records;
         return result;
     }
 
