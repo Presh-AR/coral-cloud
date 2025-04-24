@@ -43,25 +43,23 @@ public with sharing class ExperienceController {
      */
     @AuraEnabled(Cacheable=true scope='global')
     public static PagedResult getExperiences(String type, Integer pageNumber) {
-        String whereClause = '';
-        if (type != null || type != '') {
-            whereClause = 'WHERE Type__c = :type';
-        }
         Integer pageSize = ExperienceController.PAGE_SIZE;
         Integer offset = (pageNumber - 1) * pageSize;
-        return new PagedResult(
-            pageSize,
-            pageNumber,
-            Database.countQuery(
-                'SELECT count() FROM Experience__c ' + whereClause
-            ),
-            Database.query(
-                'SELECT Id, Name, Description__c, Rating__c, Picture_URL__c FROM Experience__c ' +
-                    whereClause +
-                    ' WITH USER_MODE' +
-                    ' ORDER BY Name LIMIT :pageSize OFFSET :offset'
-            )
-        );
+        PagedResult result = new PagedResult();
+        result.pageSize = pageSize;
+        result.pageNumber = pageNumber;
+        List<Experience__c> records;
+        Integer totalItemCount;
+        if (String.isNotBlank(type)) {
+            totalItemCount = [SELECT count() FROM Experience__c WHERE Type__c = :type];
+            records = [SELECT Id, Name, Description__c, Rating__c, Picture_URL__c FROM Experience__c WHERE Type__c = :type WITH USER_MODE ORDER BY Name LIMIT :pageSize OFFSET :offset];
+        } else {
+            totalItemCount = [SELECT count() FROM Experience__c];
+            records = [SELECT Id, Name, Description__c, Rating__c, Picture_URL__c FROM Experience__c WITH USER_MODE ORDER BY Name LIMIT :pageSize OFFSET :offset];
+        }
+        result.totalItemCount = totalItemCount;
+        result.records = records;
+        return result;
     }
 
     public with sharing class PagedResult {
