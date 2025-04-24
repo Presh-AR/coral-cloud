@@ -49,19 +49,19 @@ public with sharing class ExperienceController {
         }
         Integer pageSize = ExperienceController.PAGE_SIZE;
         Integer offset = (pageNumber - 1) * pageSize;
-        PagedResult result = new PagedResult();
-        result.pageSize = pageSize;
-        result.pageNumber = pageNumber;
-        result.totalItemCount = Database.countQuery(
-            'SELECT count() FROM Experience__c ' + whereClause
+        return new PagedResult(
+            pageSize,
+            pageNumber,
+            Database.countQuery(
+                'SELECT count() FROM Experience__c ' + whereClause
+            ),
+            Database.query(
+                'SELECT Id, Name, Description__c, Rating__c, Picture_URL__c FROM Experience__c ' +
+                    whereClause +
+                    ' WITH USER_MODE' +
+                    ' ORDER BY Name LIMIT :pageSize OFFSET :offset'
+            )
         );
-        result.records = Database.query(
-            'SELECT Id, Name, Description__c, Rating__c, Picture_URL__c FROM Experience__c ' +
-                whereClause +
-                ' WITH USER_MODE' +
-                ' ORDER BY Name LIMIT :pageSize OFFSET :offset'
-        );
-        return result;
     }
 
     public with sharing class PagedResult {
