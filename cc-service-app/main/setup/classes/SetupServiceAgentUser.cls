@@ -141,55 +141,47 @@ public with sharing class SetupServiceAgentUser {
 
     @TestVisible
     private static void checkSecurityAccess() {
-        // Check CRUD permissions for Profile
+        checkProfileAccess();
+        checkUserAccess();
+        checkPermissionSetLicenseAccess();
+        checkPermissionSetLicenseAssignAccess();
+        checkPermissionSetAccess();
+        checkPermissionSetAssignmentAccess();
+    }
+
+    private static void checkProfileAccess() {
         if (!Schema.sObjectType.Profile.isAccessible()) {
-            throw new SecurityException(
-                'Insufficient permissions to access Profile'
-            );
+            throw new SecurityException('Insufficient permissions to access Profile');
         }
+    }
 
-        // Check CRUD permissions for User
-        if (
-            !Schema.sObjectType.User.isAccessible() ||
-            !Schema.sObjectType.User.isCreateable()
-        ) {
-            throw new SecurityException(
-                'Insufficient permissions to access or create User'
-            );
+    private static void checkUserAccess() {
+        if (!Schema.sObjectType.User.isAccessible() || !Schema.sObjectType.User.isCreateable()) {
+            throw new SecurityException('Insufficient permissions to access or create User');
         }
+    }
 
-        // Check CRUD permissions for PermissionSetLicense
+    private static void checkPermissionSetLicenseAccess() {
         if (!Schema.sObjectType.PermissionSetLicense.isAccessible()) {
-            throw new SecurityException(
-                'Insufficient permissions to access PermissionSetLicense'
-            );
+            throw new SecurityException('Insufficient permissions to access PermissionSetLicense');
         }
+    }
 
-        // Check CRUD permissions for PermissionSetLicenseAssign
-        if (
-            !Schema.sObjectType.PermissionSetLicenseAssign.isAccessible() ||
-            !Schema.sObjectType.PermissionSetLicenseAssign.isCreateable()
-        ) {
-            throw new SecurityException(
-                'Insufficient permissions to access or create PermissionSetLicenseAssign'
-            );
+    private static void checkPermissionSetLicenseAssignAccess() {
+        if (!Schema.sObjectType.PermissionSetLicenseAssign.isAccessible() || !Schema.sObjectType.PermissionSetLicenseAssign.isCreateable()) {
+            throw new SecurityException('Insufficient permissions to access or create PermissionSetLicenseAssign');
         }
+    }
 
-        // Check CRUD permissions for PermissionSet
+    private static void checkPermissionSetAccess() {
         if (!Schema.sObjectType.PermissionSet.isAccessible()) {
-            throw new SecurityException(
-                'Insufficient permissions to access PermissionSet'
-            );
+            throw new SecurityException('Insufficient permissions to access PermissionSet');
         }
+    }
 
-        // Check CRUD permissions for PermissionSetAssignment
-        if (
-            !Schema.sObjectType.PermissionSetAssignment.isAccessible() ||
-            !Schema.sObjectType.PermissionSetAssignment.isCreateable()
-        ) {
-            throw new SecurityException(
-                'Insufficient permissions to access or create PermissionSetAssignment'
-            );
+    private static void checkPermissionSetAssignmentAccess() {
+        if (!Schema.sObjectType.PermissionSetAssignment.isAccessible() || !Schema.sObjectType.PermissionSetAssignment.isCreateable()) {
+            throw new SecurityException('Insufficient permissions to access or create PermissionSetAssignment');
         }
     }
 }
