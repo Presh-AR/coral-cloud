@@ -1,10 +1,24 @@
 public class WeatherService {
+    // Singleton instance
+    private static WeatherService instance;
+
+    // Private constructor to prevent instantiation
+    private WeatherService() {}
+
+    // Public method to get the singleton instance
+    public static WeatherService getInstance() {
+        if (instance == null) {
+            instance = new WeatherService();
+        }
+        return instance;
+    }
+
     /**
      * Gets the weather at Coral Cloud Resorts for the provided date
      * @param dateToCheck the date for which we're checking the weather
      * @return the weather information
      */
-    public static Weather getResortWeather(Datetime dateToCheck) {
+    public Weather getResortWeather(Datetime dateToCheck) {
         // Copilot was trained in 2023 so it will use 2023 as the default year if
         // the user does not specify a year in their prompt. This means that we need
         // to adjust the input date to be on the current year.
