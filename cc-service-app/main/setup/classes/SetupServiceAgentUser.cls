@@ -19,20 +19,24 @@ public with sharing class SetupServiceAgentUser {
     };
 
     public static void setup() {
-        // Check all security permissions upfront
         checkSecurityAccess();
+        Profile profile = getAgentProfile();
+        User user = createOrRetrieveUser(profile);
+        assignPermissionSetLicenses(user);
+        assignPermissionSets(user);
+    }
 
-        // Get agent profile
-        Profile p = [
+    private static Profile getAgentProfile() {
+        return [
             SELECT Id
             FROM Profile
             WHERE Name = 'Einstein Agent User'
             WITH SECURITY_ENFORCED
             LIMIT 1
         ];
+    }
 
-        // Create user or use existing one
-        User u;
+    private static User createOrRetrieveUser(Profile profile) {
         List<User> users = [
             SELECT Id
             FROM User
@@ -40,100 +44,88 @@ public with sharing class SetupServiceAgentUser {
             WITH SECURITY_ENFORCED
             LIMIT 1
         ];
-        if (users.size() == 0) {
-            u = new user();
-            u.LastName = 'Coral Cloud Agent User';
-            u.Email = USERNAME;
-            u.Alias = 'ccagent';
-            u.Username = USERNAME;
-            u.CommunityNickname = NICKNAME;
-            u.LocaleSidKey = 'en_US';
-            u.TimeZoneSidKey = 'GMT';
-            u.ProfileID = p.id;
-            u.LanguageLocaleKey = 'en_US';
-            u.EmailEncodingKey = 'UTF-8';
-            insert as user u;
-            System.debug('Created user: ' + u.Username);
+        if (users.isEmpty()) {
+            User user = new User();
+            user.LastName = 'Coral Cloud Agent User';
+            user.Email = USERNAME;
+            user.Alias = 'ccagent';
+            user.Username = USERNAME;
+            user.CommunityNickname = NICKNAME;
+            user.LocaleSidKey = 'en_US';
+            user.TimeZoneSidKey = 'GMT';
+            user.ProfileID = profile.Id;
+            user.LanguageLocaleKey = 'en_US';
+            user.EmailEncodingKey = 'UTF-8';
+            insert user;
+            System.debug('Created user: ' + user.Username);
+            return user;
         } else {
             System.debug('Skipped user creation');
-            u = users[0];
+            return users[0];
         }
+    }
 
-        // Get permission set licenses (PSL)
-        Set<Id> targetPslIds = new Map<Id, PermissionSetLicense>(
-                [
-                    SELECT Id
-                    FROM PermissionSetLicense
-                    WHERE DeveloperName IN :PERM_SET_LICENSES
-                    WITH SECURITY_ENFORCED
-                ]
-            )
-            .keySet();
+    private static void assignPermissionSetLicenses(User user) {
+        Set<Id> targetPslIds = new Map<Id, PermissionSetLicense>([
+            SELECT Id
+            FROM PermissionSetLicense
+            WHERE DeveloperName IN :PERM_SET_LICENSES
+            WITH SECURITY_ENFORCED
+        ]).keySet();
 
-        // Exclude already assigned PSLs
         List<PermissionSetLicenseAssign> userPslas = [
             SELECT PermissionSetLicenseId
             FROM PermissionSetLicenseAssign
-            WHERE AssigneeId = :u.Id AND PermissionSetLicenseId IN :targetPslIds
+            WHERE AssigneeId = :user.Id AND PermissionSetLicenseId IN :targetPslIds
             WITH SECURITY_ENFORCED
         ];
-        Set<Id> userPslIds = new Set<Id>();
         for (PermissionSetLicenseAssign userPsla : userPslas) {
-            userPslIds.add(userPsla.PermissionSetLicenseId);
+            targetPslIds.remove(userPsla.PermissionSetLicenseId);
         }
-        targetPslIds.removeAll(userPslIds);
 
-        // Assign PSLs to user
-        if (targetPslIds.size() > 0) {
+        if (!targetPslIds.isEmpty()) {
             List<PermissionSetLicenseAssign> pslas = new List<PermissionSetLicenseAssign>();
             for (Id pslId : targetPslIds) {
                 PermissionSetLicenseAssign psla = new PermissionSetLicenseAssign();
-                psla.AssigneeId = u.Id;
+                psla.AssigneeId = user.Id;
                 psla.PermissionSetLicenseId = pslId;
                 pslas.add(psla);
             }
-            insert as user pslas;
-            System.debug(
-                'Assigned permission set licenses: ' + PERM_SET_LICENSES
-            );
+            insert pslas;
+            System.debug('Assigned permission set licenses: ' + PERM_SET_LICENSES);
         } else {
             System.debug('Skipped permission set license assignment.');
         }
+    }
 
-        // Get permission sets (PS)
-        Set<Id> targetPsIds = new Map<Id, PermissionSet>(
-                [
-                    SELECT Id
-                    FROM PermissionSet
-                    WHERE Name IN :PERM_SETS
-                    WITH SECURITY_ENFORCED
-                ]
-            )
-            .keySet();
+    private static void assignPermissionSets(User user) {
+        Set<Id> targetPsIds = new Map<Id, PermissionSet>([
+            SELECT Id
+            FROM PermissionSet
+            WHERE Name IN :PERM_SETS
+            WITH SECURITY_ENFORCED
+        ]).keySet();
 
-        // Exclude already assigned PSs
         List<PermissionSetAssignment> userPsas = [
             SELECT PermissionSetId
             FROM PermissionSetAssignment
-            WHERE AssigneeId = :u.Id AND PermissionSetId IN :targetPsIds
+            WHERE AssigneeId = :user.Id AND PermissionSetId IN :targetPsIds
             WITH SECURITY_ENFORCED
         ];
-        Set<Id> userPsIds = new Set<Id>();
         for (PermissionSetAssignment userPsa : userPsas) {
-            userPsIds.add(userPsa.PermissionSetId);
+            targetPsIds.remove(userPsa.PermissionSetId);
         }
-        targetPsIds.removeAll(userPsIds);
-        // Assign PSs to user
-        if (targetPsIds.size() > 0) {
-            List<PermissionSetAssignment> psaas = new List<PermissionSetAssignment>();
+
+        if (!targetPsIds.isEmpty()) {
+            List<PermissionSetAssignment> psas = new List<PermissionSetAssignment>();
             for (Id psId : targetPsIds) {
                 PermissionSetAssignment psa = new PermissionSetAssignment();
-                psa.AssigneeId = u.Id;
+                psa.AssigneeId = user.Id;
                 psa.PermissionSetId = psId;
-                psaas.add(psa);
+                psas.add(psa);
             }
-            insert as user psaas;
-            System.debug('Assigned permission set: ' + PERM_SETS);
+            insert psas;
+            System.debug('Assigned permission sets: ' + PERM_SETS);
         } else {
             System.debug('Skipped permission set assignment.');
         }
