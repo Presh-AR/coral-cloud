@@ -23,16 +23,29 @@ public with sharing class SetupServiceAgentUser {
         checkSecurityAccess();
 
         // Get agent profile
-        Profile p = [
+        Profile p = getAgentProfile();
+
+        // Create user or use existing one
+        User u = getOrCreateUser(p);
+
+        // Assign permission set licenses (PSL)
+        assignPermissionSetLicenses(u);
+
+        // Assign permission sets (PS)
+        assignPermissionSets(u);
+    }
+
+    private static Profile getAgentProfile() {
+        return [
             SELECT Id
             FROM Profile
             WHERE Name = 'Einstein Agent User'
             WITH SECURITY_ENFORCED
             LIMIT 1
         ];
+    }
 
-        // Create user or use existing one
-        User u;
+    private static User getOrCreateUser(Profile p) {
         List<User> users = [
             SELECT Id
             FROM User
@@ -40,8 +53,8 @@ public with sharing class SetupServiceAgentUser {
             WITH SECURITY_ENFORCED
             LIMIT 1
         ];
-        if (users.size() == 0) {
-            u = new user();
+        if (users.isEmpty()) {
+            User u = new User();
             u.LastName = 'Coral Cloud Agent User';
             u.Email = USERNAME;
             u.Alias = 'ccagent';
@@ -49,17 +62,19 @@ public with sharing class SetupServiceAgentUser {
             u.CommunityNickname = NICKNAME;
             u.LocaleSidKey = 'en_US';
             u.TimeZoneSidKey = 'GMT';
-            u.ProfileID = p.id;
+            u.ProfileID = p.Id;
             u.LanguageLocaleKey = 'en_US';
             u.EmailEncodingKey = 'UTF-8';
-            insert as user u;
+            insert u;
             System.debug('Created user: ' + u.Username);
+            return u;
         } else {
             System.debug('Skipped user creation');
-            u = users[0];
+            return users[0];
         }
+    }
 
-        // Get permission set licenses (PSL)
+    private static void assignPermissionSetLicenses(User u) {
         Set<Id> targetPslIds = new Map<Id, PermissionSetLicense>(
                 [
                     SELECT Id
@@ -70,7 +85,6 @@ public with sharing class SetupServiceAgentUser {
             )
             .keySet();
 
-        // Exclude already assigned PSLs
         List<PermissionSetLicenseAssign> userPslas = [
             SELECT PermissionSetLicenseId
             FROM PermissionSetLicenseAssign
@@ -83,8 +97,7 @@ public with sharing class SetupServiceAgentUser {
         }
         targetPslIds.removeAll(userPslIds);
 
-        // Assign PSLs to user
-        if (targetPslIds.size() > 0) {
+        if (!targetPslIds.isEmpty()) {
             List<PermissionSetLicenseAssign> pslas = new List<PermissionSetLicenseAssign>();
             for (Id pslId : targetPslIds) {
                 PermissionSetLicenseAssign psla = new PermissionSetLicenseAssign();
@@ -92,15 +105,14 @@ public with sharing class SetupServiceAgentUser {
                 psla.PermissionSetLicenseId = pslId;
                 pslas.add(psla);
             }
-            insert as user pslas;
-            System.debug(
-                'Assigned permission set licenses: ' + PERM_SET_LICENSES
-            );
+            insert pslas;
+            System.debug('Assigned permission set licenses: ' + PERM_SET_LICENSES);
         } else {
             System.debug('Skipped permission set license assignment.');
         }
+    }
 
-        // Get permission sets (PS)
+    private static void assignPermissionSets(User u) {
         Set<Id> targetPsIds = new Map<Id, PermissionSet>(
                 [
                     SELECT Id
@@ -111,7 +123,6 @@ public with sharing class SetupServiceAgentUser {
             )
             .keySet();
 
-        // Exclude already assigned PSs
         List<PermissionSetAssignment> userPsas = [
             SELECT PermissionSetId
             FROM PermissionSetAssignment
@@ -123,8 +134,8 @@ public with sharing class SetupServiceAgentUser {
             userPsIds.add(userPsa.PermissionSetId);
         }
         targetPsIds.removeAll(userPsIds);
-        // Assign PSs to user
-        if (targetPsIds.size() > 0) {
+
+        if (!targetPsIds.isEmpty()) {
             List<PermissionSetAssignment> psaas = new List<PermissionSetAssignment>();
             for (Id psId : targetPsIds) {
                 PermissionSetAssignment psa = new PermissionSetAssignment();
@@ -132,7 +143,7 @@ public with sharing class SetupServiceAgentUser {
                 psa.PermissionSetId = psId;
                 psaas.add(psa);
             }
-            insert as user psaas;
+            insert psaas;
             System.debug('Assigned permission set: ' + PERM_SETS);
         } else {
             System.debug('Skipped permission set assignment.');
@@ -141,55 +152,47 @@ public with sharing class SetupServiceAgentUser {
 
     @TestVisible
     private static void checkSecurityAccess() {
-        // Check CRUD permissions for Profile
+        checkProfileAccess();
+        checkUserAccess();
+        checkPermissionSetLicenseAccess();
+        checkPermissionSetLicenseAssignAccess();
+        checkPermissionSetAccess();
+        checkPermissionSetAssignmentAccess();
+    }
+
+    private static void checkProfileAccess() {
         if (!Schema.sObjectType.Profile.isAccessible()) {
-            throw new SecurityException(
-                'Insufficient permissions to access Profile'
-            );
+            throw new SecurityException('Insufficient permissions to access Profile');
         }
+    }
 
-        // Check CRUD permissions for User
-        if (
-            !Schema.sObjectType.User.isAccessible() ||
-            !Schema.sObjectType.User.isCreateable()
-        ) {
-            throw new SecurityException(
-                'Insufficient permissions to access or create User'
-            );
+    private static void checkUserAccess() {
+        if (!Schema.sObjectType.User.isAccessible() || !Schema.sObjectType.User.isCreateable()) {
+            throw new SecurityException('Insufficient permissions to access or create User');
         }
+    }
 
-        // Check CRUD permissions for PermissionSetLicense
+    private static void checkPermissionSetLicenseAccess() {
         if (!Schema.sObjectType.PermissionSetLicense.isAccessible()) {
-            throw new SecurityException(
-                'Insufficient permissions to access PermissionSetLicense'
-            );
+            throw new SecurityException('Insufficient permissions to access PermissionSetLicense');
         }
+    }
 
-        // Check CRUD permissions for PermissionSetLicenseAssign
-        if (
-            !Schema.sObjectType.PermissionSetLicenseAssign.isAccessible() ||
-            !Schema.sObjectType.PermissionSetLicenseAssign.isCreateable()
-        ) {
-            throw new SecurityException(
-                'Insufficient permissions to access or create PermissionSetLicenseAssign'
-            );
+    private static void checkPermissionSetLicenseAssignAccess() {
+        if (!Schema.sObjectType.PermissionSetLicenseAssign.isAccessible() || !Schema.sObjectType.PermissionSetLicenseAssign.isCreateable()) {
+            throw new SecurityException('Insufficient permissions to access or create PermissionSetLicenseAssign');
         }
+    }
 
-        // Check CRUD permissions for PermissionSet
+    private static void checkPermissionSetAccess() {
         if (!Schema.sObjectType.PermissionSet.isAccessible()) {
-            throw new SecurityException(
-                'Insufficient permissions to access PermissionSet'
-            );
+            throw new SecurityException('Insufficient permissions to access PermissionSet');
         }
+    }
 
-        // Check CRUD permissions for PermissionSetAssignment
-        if (
-            !Schema.sObjectType.PermissionSetAssignment.isAccessible() ||
-            !Schema.sObjectType.PermissionSetAssignment.isCreateable()
-        ) {
-            throw new SecurityException(
-                'Insufficient permissions to access or create PermissionSetAssignment'
-            );
+    private static void checkPermissionSetAssignmentAccess() {
+        if (!Schema.sObjectType.PermissionSetAssignment.isAccessible() || !Schema.sObjectType.PermissionSetAssignment.isCreateable()) {
+            throw new SecurityException('Insufficient permissions to access or create PermissionSetAssignment');
         }
     }
 }
