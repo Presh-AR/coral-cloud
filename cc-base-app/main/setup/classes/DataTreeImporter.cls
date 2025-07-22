@@ -106,8 +106,9 @@ public with sharing class DataTreeImporter {
                 SObjectTree.class
             );
 
-            // Directly return the records instead of storing in a local variable
-            return treeData.records;
+            // Parse JSON data into a list of ObjectData
+            List<sObject> records = treeData.records;
+            return records;
         } else {
             throw new CalloutException(
                 'Failed to fetch JSON data. Status: ' + res.getStatus()
